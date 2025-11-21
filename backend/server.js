@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 
 import { initializeDatabase, initializeSchema, checkConnection } from './db/database.js';
+import authRoutes from './routes/auth.js';
 
 dotenv.config();
 
@@ -14,6 +15,8 @@ app.set('trust proxy', 1);
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+app.use('/api/auth', authRoutes);
 
 // Health check
 app.get('/health', async (req, res) => {
