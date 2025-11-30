@@ -4,22 +4,8 @@ This directory contains test suites for the backend API.
 
 ## Test Files
 
-### 1. `simple-auth-test.js` (Recommended for Quick Testing)
+### `simple-auth-test.js`
 A simple test script that doesn't require any test framework. Perfect for quick API testing.
-
-**Run:**
-```bash
-npm run test:simple
-```
-
-**Features:**
-- No dependencies required (uses axios which is already installed)
-- Easy to understand and modify
-- Provides colored console output
-- Tests all authentication endpoints
-
-### 2. `auth.test.js` (Professional Test Suite)
-Comprehensive test suite using Jest and Supertest for professional testing.
 
 **Run:**
 ```bash
@@ -27,10 +13,10 @@ npm test
 ```
 
 **Features:**
-- Full test coverage
-- Professional test framework
-- Detailed assertions
-- Can generate coverage reports
+- No dependencies required (uses axios which is already installed)
+- Easy to understand and modify
+- Provides colored console output
+- Tests all authentication endpoints
 
 ## Prerequisites
 
@@ -49,27 +35,18 @@ Before running tests, make sure:
    - `JWT_SECRET` must be set
    - Other variables have defaults
 
+4. **Rate limiting (for development):**
+   - Set `RATE_LIMIT_ENABLED=false` in your `.env` file to avoid rate limit errors during testing
+
 ## Running Tests
 
-### Quick Test (Simple Script)
+### Quick Test
 ```bash
 # Make sure server is running in another terminal
 npm run dev
 
 # In another terminal, run:
-npm run test:simple
-```
-
-### Full Test Suite (Jest)
-```bash
-# Install test dependencies first (if not already installed)
-npm install
-
-# Run tests
 npm test
-
-# Run tests in watch mode
-npm run test:watch
 ```
 
 ## Test Coverage
@@ -114,7 +91,6 @@ The tests cover:
 
 ## Writing New Tests
 
-### For Simple Tests
 Edit `simple-auth-test.js` and add your test function:
 
 ```javascript
@@ -130,21 +106,7 @@ async function testNewFeature() {
 }
 ```
 
-### For Jest Tests
-Edit `auth.test.js` and add a new describe block:
-
-```javascript
-describe('New Feature', () => {
-  it('should work correctly', async () => {
-    const response = await request(app)
-      .post('/api/auth/new-endpoint')
-      .send(data)
-      .expect(200);
-    
-    expect(response.body).toHaveProperty('success', true);
-  });
-});
-```
+Then call it in the `runAllTests()` function.
 
 ## Troubleshooting
 
@@ -161,7 +123,5 @@ describe('New Feature', () => {
 - Or tests will run without database (some features may not work)
 
 ### Rate limiting errors
-- Tests may hit rate limits if run too quickly
-- Wait a few seconds between test runs
-- Or adjust rate limits in `constants/index.js` for testing
-
+- Set `RATE_LIMIT_ENABLED=false` in your `.env` file to disable rate limiting during testing
+- Or wait a few seconds between test runs

@@ -30,8 +30,12 @@ app.use(securityLogger);
 app.use(express.json({ limit: appConfig.requestSizeLimit }));
 app.use(express.urlencoded({ extended: true, limit: appConfig.requestSizeLimit }));
 
-// Rate limiting
-app.use(generalLimiter);
+// Rate limiting (conditionally applied based on RATE_LIMIT_ENABLED env variable)
+if (appConfig.rateLimit.enabled) {
+  app.use(generalLimiter);
+} else {
+  // Rate limiting is disabled - all rate limiters will be no-op middlewares
+}
 
 // API routes
 app.use(`${appConfig.apiPrefix}/auth`, authRoutes);
@@ -60,15 +64,15 @@ app.get('/health', async (req, res) => {
 app.post(`${appConfig.apiPrefix}/init-db`, async (req, res) => {
   try {
     await initializeSchema();
-    return res.json({ 
-      success: true, 
-      message: 'Database initialized successfully' 
+    return res.json({
+      success: true,
+      message: 'Database initialized successfully'
     });
   } catch (error) {
     logger.error('Database initialization error', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: error.message 
+    return res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });
@@ -84,6 +88,13 @@ app.use(errorHandler);
  */
 async function startServer() {
   logger.info('🚀 Starting AI Agent Platform Server...\n');
+
+  // Log rate limiting status
+  if (appConfig.rateLimit.enabled) {
+    logger.info('🛡️  Rate limiting: ENABLED');
+  } else {
+    logger.warn('⚠️  Rate limiting: DISABLED (set RATE_LIMIT_ENABLED=true to enable)');
+  }
 
   // Initialize database connection
   const dbInitialized = initializeDatabase();
@@ -119,10 +130,10 @@ async function startServer() {
   // Graceful shutdown
   const gracefulShutdown = async (signal) => {
     logger.warn(`\n${signal} received. Starting graceful shutdown...`);
-    
+
     httpServer.close(async () => {
       logger.info('HTTP server closed');
-      
+
       // Close database connections if needed
       try {
         // Add database cleanup here if needed
@@ -130,7 +141,7 @@ async function startServer() {
       } catch (error) {
         logger.error('Error closing database connections', error);
       }
-      
+
       logger.info('Graceful shutdown complete');
       process.exit(0);
     });

@@ -1,9 +1,22 @@
 import rateLimit from 'express-rate-limit';
+import { appConfig } from '../config/app.js';
+
+/**
+ * Conditional rate limiter wrapper
+ * Returns a no-op middleware if rate limiting is disabled
+ */
+const conditionalRateLimit = (config) => {
+  if (!appConfig.rateLimit.enabled) {
+    // Return a no-op middleware that just calls next()
+    return (req, res, next) => next();
+  }
+  return rateLimit(config);
+};
 
 /**
  * General API rate limiting
  */
-export const generalLimiter = rateLimit({
+export const generalLimiter = conditionalRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: {
@@ -25,7 +38,7 @@ export const generalLimiter = rateLimit({
 /**
  * Strict rate limiting for authentication endpoints
  */
-export const authLimiter = rateLimit({
+export const authLimiter = conditionalRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // Limit each IP to 5 login attempts per windowMs
   message: {
@@ -46,7 +59,7 @@ export const authLimiter = rateLimit({
 /**
  * Rate limiting for chat endpoints
  */
-export const chatLimiter = rateLimit({
+export const chatLimiter = conditionalRateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 30, // Limit each IP to 30 chat messages per minute
   message: {
@@ -66,7 +79,7 @@ export const chatLimiter = rateLimit({
 /**
  * Rate limiting for voice call endpoints
  */
-export const voiceLimiter = rateLimit({
+export const voiceLimiter = conditionalRateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
   max: 10, // Limit each IP to 10 voice calls per 5 minutes
   message: {
@@ -86,7 +99,7 @@ export const voiceLimiter = rateLimit({
 /**
  * Rate limiting for agent creation/modification
  */
-export const agentLimiter = rateLimit({
+export const agentLimiter = conditionalRateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20, // Limit each IP to 20 agent operations per hour
   message: {
@@ -106,7 +119,7 @@ export const agentLimiter = rateLimit({
 /**
  * Rate limiting for function execution
  */
-export const functionLimiter = rateLimit({
+export const functionLimiter = conditionalRateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 60, // Limit each IP to 60 function executions per minute
   message: {
@@ -126,7 +139,7 @@ export const functionLimiter = rateLimit({
 /**
  * Rate limiting for file uploads (future use)
  */
-export const uploadLimiter = rateLimit({
+export const uploadLimiter = conditionalRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 uploads per 15 minutes
   message: {
@@ -147,7 +160,7 @@ export const uploadLimiter = rateLimit({
  * Create custom rate limiter
  */
 export const createCustomLimiter = (windowMs, max, message) => {
-  return rateLimit({
+  return conditionalRateLimit({
     windowMs,
     max,
     message: {
