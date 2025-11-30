@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 /package-lock.json
+
+/ENV_EXAMPLE.md
+/README.md
