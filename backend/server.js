@@ -13,6 +13,7 @@ import logger from './utils/logger.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
+import agentRoutes from './routes/agents.js';
 
 // Initialize Express app
 const app = express();
@@ -39,6 +40,8 @@ if (appConfig.rateLimit.enabled) {
 
 // API routes
 app.use(`${appConfig.apiPrefix}/auth`, authRoutes);
+app.use(`${appConfig.apiPrefix}/agents`, agentRoutes);
+
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
