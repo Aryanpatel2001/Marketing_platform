@@ -34,7 +34,6 @@ export const appConfig = {
 
     // Rate Limiting
     rateLimit: {
-        enabled: env.ENABLE_RATE_LIMIT,
         windowMs: 15 * 60 * 1000, // 15 minutes
         max: 100,
     },
