@@ -58,11 +58,12 @@ export async function generateSpeech(text, options = {}) {
 
         return base64Audio;
     } catch (error) {
-        // Error logging is handled by the service layer
+        console.error('[ElevenLabs] Error generating speech:', error.message);
         if (error.response) {
-            throw new Error(`ElevenLabs API error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+            console.error('[ElevenLabs] Response status:', error.response.status);
+            console.error('[ElevenLabs] Response data:', error.response.data);
         }
-        throw new Error(`Failed to generate speech: ${error.message}`);
+        return '';
     }
 }
 

@@ -14,6 +14,7 @@ import logger from './utils/logger.js';
 // Import routes
 import authRoutes from './routes/auth.js';
 import agentRoutes from './routes/agents.js';
+import twilioRoutes from './routes/twilio.js';
 
 // Initialize Express app
 const app = express();
@@ -31,17 +32,13 @@ app.use(securityLogger);
 app.use(express.json({ limit: appConfig.requestSizeLimit }));
 app.use(express.urlencoded({ extended: true, limit: appConfig.requestSizeLimit }));
 
-// Rate limiting (conditionally applied based on RATE_LIMIT_ENABLED env variable)
-if (appConfig.rateLimit.enabled) {
-  app.use(generalLimiter);
-} else {
-  // Rate limiting is disabled - all rate limiters will be no-op middlewares
-}
+// Rate limiting
+app.use(generalLimiter);
 
 // API routes
 app.use(`${appConfig.apiPrefix}/auth`, authRoutes);
 app.use(`${appConfig.apiPrefix}/agents`, agentRoutes);
-
+app.use(`${appConfig.apiPrefix}/twilio`, twilioRoutes);
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
@@ -91,13 +88,6 @@ app.use(errorHandler);
  */
 async function startServer() {
   logger.info('🚀 Starting AI Agent Platform Server...\n');
-
-  // Log rate limiting status
-  if (appConfig.rateLimit.enabled) {
-    logger.info('🛡️  Rate limiting: ENABLED');
-  } else {
-    logger.warn('⚠️  Rate limiting: DISABLED (set RATE_LIMIT_ENABLED=true to enable)');
-  }
 
   // Initialize database connection
   const dbInitialized = initializeDatabase();

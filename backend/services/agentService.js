@@ -3,164 +3,120 @@
  * Business logic for agent operations
  */
 
-import * as agentRepository from '../db/repositories/agentRepository.js';
+import * as agentRepo from '../db/repositories/agentRepository.js';
 import { generateSpeech } from './elevenlabsService.js';
-import { NotFoundError, BadRequestError, ValidationError } from '../errors/AppError.js';
+import { NotFoundError, ForbiddenError } from '../errors/AppError.js';
 import { ERROR_MESSAGES } from '../constants/index.js';
 import logger from '../utils/logger.js';
 
 /**
  * Get all agents for a user
  */
-export async function getUserAgents(userId) {
-    try {
-        const agents = await agentRepository.getAllAgentsByUser(userId);
-        return agents;
-    } catch (error) {
-        logger.error('Error getting user agents', error);
-        throw error;
-    }
+export async function getAllAgents(userId) {
+    const agents = await agentRepo.getAllAgentsByUser(userId);
+    return agents;
 }
 
 /**
- * Get agent by ID (ensures user owns the agent)
+ * Get agent stats for a user
  */
-export async function getUserAgent(agentId, userId) {
-    const agent = await agentRepository.getAgentByIdAndUser(agentId, userId);
+export async function getAgentStats(userId) {
+    const stats = await agentRepo.getAgentStatsByUser(userId);
+    return stats;
+}
+
+/**
+ * Get single agent by ID (user-specific)
+ */
+export async function getAgentById(agentId, userId) {
+    const agent = await agentRepo.getAgentByIdAndUser(agentId, userId);
 
     if (!agent) {
-        throw new NotFoundError('Agent not found or you do not have permission to access it');
+        throw new NotFoundError('Agent not found or you do not have permission to access it.');
     }
 
     return agent;
 }
 
 /**
- * Get agent stats for a user
- */
-export async function getUserAgentStats(userId) {
-    try {
-        const stats = await agentRepository.getAgentStatsByUser(userId);
-        return stats;
-    } catch (error) {
-        logger.error('Error getting user agent stats', error);
-        throw error;
-    }
-}
-
-/**
  * Create a new agent
  */
 export async function createAgent(agentData, userId) {
-    try {
-        // Add user_id to agent data
-        const dataWithUserId = {
-            ...agentData,
-            user_id: userId,
-        };
+    const agentDataWithUser = {
+        ...agentData,
+        user_id: userId,
+    };
 
-        const agent = await agentRepository.createAgent(dataWithUserId);
+    const agent = await agentRepo.createAgent(agentDataWithUser);
 
-        logger.info('Agent created successfully', { agentId: agent.id, userId });
+    logger.info('Agent created successfully', { agentId: agent.id, userId });
 
-        return agent;
-    } catch (error) {
-        logger.error('Error creating agent', error);
-        throw error;
-    }
+    return agent;
 }
 
 /**
- * Update an agent (ensures user owns the agent)
+ * Update an agent (user-specific)
  */
-export async function updateAgent(agentId, agentData, userId) {
-    // First verify the agent exists and belongs to the user
-    const existingAgent = await agentRepository.getAgentByIdAndUser(agentId, userId);
+export async function updateAgent(agentId, updates, userId) {
+    // Verify agent exists and belongs to user
+    const existingAgent = await agentRepo.getAgentByIdAndUser(agentId, userId);
 
     if (!existingAgent) {
-        throw new NotFoundError('Agent not found or you do not have permission to update it');
+        throw new NotFoundError('Agent not found or you do not have permission to update it.');
     }
 
-    try {
-        const updatedAgent = await agentRepository.updateAgent(agentId, agentData);
+    const updatedAgent = await agentRepo.updateAgent(agentId, updates);
 
-        logger.info('Agent updated successfully', { agentId, userId });
+    logger.info('Agent updated successfully', { agentId, userId });
 
-        return updatedAgent;
-    } catch (error) {
-        logger.error('Error updating agent', error);
-        throw error;
-    }
+    return updatedAgent;
 }
 
 /**
- * Delete an agent (ensures user owns the agent)
+ * Delete an agent (user-specific)
  */
 export async function deleteAgent(agentId, userId) {
-    // First verify the agent exists and belongs to the user
-    const existingAgent = await agentRepository.getAgentByIdAndUser(agentId, userId);
+    // Verify agent exists and belongs to user
+    const existingAgent = await agentRepo.getAgentByIdAndUser(agentId, userId);
 
     if (!existingAgent) {
-        throw new NotFoundError('Agent not found or you do not have permission to delete it');
+        throw new NotFoundError('Agent not found or you do not have permission to delete it.');
     }
 
-    try {
-        await agentRepository.deleteAgent(agentId);
+    await agentRepo.deleteAgent(agentId);
 
-        logger.info('Agent deleted successfully', { agentId, userId });
-
-        return { success: true, message: 'Agent deleted successfully' };
-    } catch (error) {
-        logger.error('Error deleting agent', error);
-        throw error;
-    }
+    logger.info('Agent deleted successfully', { agentId, userId });
 }
 
 /**
  * Test voice sample generation
  */
-export async function testVoiceSample(voiceOptions) {
-    try {
-        const { voiceId, stability, similarityBoost, speed, text } = voiceOptions;
+export async function testVoiceSample(voiceSettings, text) {
+    const testText = text || "Hello! This is a test of your selected voice settings. How does this sound?";
 
-        const testText = text || "Hello! This is a test of your selected voice settings. How does this sound?";
+    const audioBase64 = await generateSpeech(testText, {
+        voiceId: voiceSettings?.voiceId || 'default',
+        stability: typeof voiceSettings?.stability === 'number' ? voiceSettings.stability : 0.5,
+        similarityBoost: typeof voiceSettings?.similarityBoost === 'number' ? voiceSettings.similarityBoost : 0.75,
+        speed: typeof voiceSettings?.speed === 'number' ? voiceSettings.speed : 1.0,
+    });
 
-        // Generate base64 audio (audio/mpeg) from ElevenLabs
-        let audioBase64;
-        try {
-            audioBase64 = await generateSpeech(testText, {
-                voiceId: voiceId || 'default',
-                stability: typeof stability === 'number' ? stability : 0.5,
-                similarityBoost: typeof similarityBoost === 'number' ? similarityBoost : 0.75,
-                speed: typeof speed === 'number' ? speed : 1.0
-            });
-        } catch (error) {
-            throw new BadRequestError(`Voice generation failed: ${error.message}`);
-        }
-
-        if (!audioBase64 || audioBase64 === '') {
-            throw new BadRequestError('Voice generation service is not available. Please check ElevenLabs configuration.');
-        }
-
-        // Build a proper data URL that the browser can play directly
-        const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
-
-        return {
-            success: true,
-            audioUrl,
-            audioBase64, // included for clients that prefer Blob URLs
-            message: 'Voice sample generated successfully'
-        };
-    } catch (error) {
-        logger.error('Error generating voice sample', error);
-        throw error;
+    if (!audioBase64) {
+        throw new Error('Voice generation service is not available. Please check ElevenLabs configuration.');
     }
+
+    const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
+
+    return {
+        audioUrl,
+        audioBase64,
+    };
 }
 
 export default {
-    getUserAgents,
-    getUserAgent,
-    getUserAgentStats,
+    getAllAgents,
+    getAgentStats,
+    getAgentById,
     createAgent,
     updateAgent,
     deleteAgent,
